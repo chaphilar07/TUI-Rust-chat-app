@@ -82,18 +82,14 @@ async fn main() -> Result<(), io::Error> {
     let mut cursor_position = 0;
 
     loop {
-        // Poll for incoming messages from the server
         match rx1.try_recv() {
             Ok(peer_msg) => {
                 display.push_str(peer_msg.as_str());
                 display.push('\n');
             }
-            Err(_) => {
-                // No new messages, just continue
-            }
+            Err(_) => {}
         }
 
-        // Poll for user input events
         if event::poll(Duration::from_millis(10))? {
             // If there is a key event, process it
             if let Event::Key(key) = event::read()? {
