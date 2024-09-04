@@ -15,15 +15,12 @@ use crossterm::{
 };
 
 use futures::{SinkExt, StreamExt};
+use std::io::{self, stdin, stdout, Write};
 use std::net::{IpAddr, SocketAddr as StdSocketAddr};
-use std::{
-    fmt::format,
-    io::{self, stdin, stdout, Write},
-};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::TcpSocket;
 use tokio::sync::broadcast::{channel, Receiver, Sender};
-use tokio::time::{self, Duration};
+use tokio::time::Duration;
 use tokio_util::codec::{FramedRead, FramedWrite, LinesCodec};
 use tui::{
     backend::CrosstermBackend,
@@ -32,6 +29,10 @@ use tui::{
     widgets::{Block, Borders, Paragraph},
     Terminal,
 };
+
+use std::sync::atomic::{AtomicBool, Ordering};
+
+static IS_RUNNING: AtomicBool = AtomicBool::new(true);
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
@@ -45,8 +46,8 @@ async fn main() -> Result<(), io::Error> {
     let server_socket = StdSocketAddr::new(server_ip, 42069);
 
     //We will create two seperate channels for sending and receiving from the server.
-    let (mut tx0, mut rx0) = channel::<String>(32);
-    let (mut tx1, mut rx1) = channel::<String>(32);
+    let (tx0, rx0) = channel::<String>(32);
+    let (tx1, mut rx1) = channel::<String>(32);
 
     let connection = client_socket
         .connect(server_socket)
@@ -96,6 +97,10 @@ async fn main() -> Result<(), io::Error> {
                 match key.code {
                     KeyCode::Char(c) => {
                         input.insert(cursor_position, c);
+                        if input.len() > 0 && input.len() % 180 == 0 {
+                            input.insert(cursor_position, '\n');
+                            cursor_position += 1;
+                        }
                         cursor_position += 1;
                     }
                     KeyCode::Backspace => {
@@ -124,7 +129,16 @@ async fn main() -> Result<(), io::Error> {
                         cursor_position = 0;
                     }
                     KeyCode::Esc => {
-                        break; // Exit the loop on Esc
+                        disable_raw_mode()?;
+                        execute!(
+                            terminal.backend_mut(),
+                            LeaveAlternateScreen,
+                            DisableMouseCapture
+                        )?;
+                        IS_RUNNING.store(false, Ordering::Relaxed);
+                        terminal.show_cursor()?;
+
+                        break;
                     }
                     _ => {}
                 }
@@ -160,24 +174,18 @@ async fn main() -> Result<(), io::Error> {
     let _ = reading_thread.await;
     let _ = sending_thread.await;
 
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
-
     Ok(())
 }
 
-//This function reads from the server, then it will send that message through a Sender to
-//the tui thread so that it can be displayed.
 async fn read_from_server(
     mut stream: FramedRead<OwnedReadHalf, LinesCodec>,
     tx: Sender<String>,
 ) -> Result<(), io::Error> {
     loop {
+        if IS_RUNNING.load(Ordering::Relaxed) == false {
+            break;
+        }
+
         let _ = match stream.next().await {
             Some(msg) => match msg {
                 Ok(user_msg) => tx.send(user_msg),
@@ -200,55 +208,16 @@ async fn send_to_server(
     mut rx: Receiver<String>,
 ) -> Result<(), io::Error> {
     loop {
-        match rx.recv().await {
-            Ok(peer_msg) => {
-                let _ = sink.send(peer_msg).await;
+        if IS_RUNNING.load(Ordering::Relaxed) == false {
+            break;
+        }
+        match rx.try_recv() {
+            Ok(msg) => {
+                let _ = sink.send(msg).await;
             }
-            Err(e) => {
-                println!("ERROR, cannot read from the channel {:?}", e);
-                break;
-            }
+            _ => {}
         }
     }
 
     Ok(())
-}
-
-async fn capture_user_input() -> io::Result<String> {
-    let mut input = String::new();
-    let mut cursor_position = 0;
-
-    loop {
-        if let Event::Key(key) = event::read()? {
-            match key.code {
-                KeyCode::Char(c) => {
-                    input.insert(cursor_position, c);
-                    cursor_position += 1;
-                }
-                KeyCode::Backspace => {
-                    if cursor_position > 0 {
-                        cursor_position -= 1;
-                        input.remove(cursor_position);
-                    }
-                }
-                KeyCode::Left => {
-                    if cursor_position > 0 {
-                        cursor_position -= 1;
-                    }
-                }
-                KeyCode::Right => {
-                    if cursor_position < input.len() {
-                        cursor_position += 1;
-                    }
-                }
-                KeyCode::Enter => {
-                    return Ok(input); // Return the input string when Enter is pressed
-                }
-                KeyCode::Esc => {
-                    return Err(io::Error::new(io::ErrorKind::Interrupted, "Esc pressed"));
-                }
-                _ => {}
-            }
-        }
-    }
 }

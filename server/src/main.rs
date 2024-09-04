@@ -1,7 +1,8 @@
 use futures::{SinkExt, StreamExt};
+use std::sync::{Arc, Mutex};
 use tokio::{
     net::{TcpListener, TcpStream},
-    sync::broadcast::{self, channel, Sender},
+    sync::broadcast::{self, Sender},
 };
 use tokio_util::codec::{FramedRead, FramedWrite, LinesCodec};
 
@@ -12,6 +13,9 @@ async fn main() {
         .expect("Could not bind the listening socket");
 
     let (tx, _) = broadcast::channel::<String>(32);
+
+    #[warn(unused_variables)]
+    let history = Arc::new(Mutex::new(String::new()));
 
     loop {
         let (tcp, _) = server
