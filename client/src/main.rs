@@ -53,6 +53,7 @@ async fn main() -> Result<(), io::Error> {
         .connect(server_socket)
         .await
         .expect("Could not establish a connection with the client");
+    println!("Connected to the server!");
     let (reader, writer) = connection.into_split();
 
     let stream = FramedRead::new(reader, LinesCodec::new());
