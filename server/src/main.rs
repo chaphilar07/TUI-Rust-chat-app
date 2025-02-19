@@ -1,11 +1,10 @@
 use futures::{SinkExt, StreamExt};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::broadcast::{self, Sender},
 };
-
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use tokio_util::codec::{FramedRead, FramedWrite, LinesCodec};
 
 #[tokio::main]
@@ -13,12 +12,7 @@ async fn main() {
     let server = TcpListener::bind("127.0.0.1:42069")
         .await
         .expect("Could not bind the listening socket");
-
     let (tx, _) = broadcast::channel::<String>(32);
-
-    #[warn(unused_variables)]
-    /*TODO make a string that holds the entire chat history of the server
-     */
     let history: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
 
     loop {

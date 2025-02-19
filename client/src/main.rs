@@ -1,12 +1,9 @@
 /*
  * We will be creating three threads one for sending, one for receiving and one for displaying the
  * tui.
- *
  * We will use two seperate broadcast channels, one that will be for receiving messages from the
  * server then sending them to the tui thread, another for the sending of data from the user from
  * the tui thread to the sending thread.
- *
- *
  */
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
