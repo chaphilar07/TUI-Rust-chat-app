@@ -1,10 +1,14 @@
 /*
  * We will be creating three threads one for sending, one for receiving and one for displaying the
  * tui.
+ *
  * We will use two seperate broadcast channels, one that will be for receiving messages from the
  * server then sending them to the tui thread, another for the sending of data from the user from
  * the tui thread to the sending thread.
  */
+
+//Next we want to be able to scroll the tui that we have created.
+
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -77,14 +81,14 @@ async fn main() -> Result<(), io::Error> {
     let sending_thread = tokio::spawn(send_to_server(sink, rx0));
 
     let mut input = String::new();
-    let mut display = String::new();
+    let mut display_lines: Vec<String> = Vec::new();
+
     let mut cursor_position = 0;
 
     loop {
         match rx1.try_recv() {
             Ok(peer_msg) => {
-                display.push_str(peer_msg.as_str());
-                display.push('\n');
+                display_lines.push(peer_msg);
             }
             Err(_) => {}
         }
@@ -164,7 +168,20 @@ async fn main() -> Result<(), io::Error> {
                 .block(Block::default().borders(Borders::ALL).title("Input Area"))
                 .style(Style::default().fg(Color::Yellow));
             f.render_widget(input_paragraph, chunks[1]);
-            let display_paragraph = Paragraph::new(display.as_ref())
+
+            let display_height = chunks[0].height.saturating_sub(2) as usize; // leave room for borders
+            let total_lines = display_lines.len();
+
+            let start_line = if total_lines > display_height {
+                total_lines - display_height
+            } else {
+                0
+            };
+
+            let visible_lines = &display_lines[start_line..];
+            let display_text = visible_lines.join("\n");
+
+            let display_paragraph = Paragraph::new(display_text)
                 .block(Block::default().borders(Borders::ALL).title("Display Area"));
             f.render_widget(display_paragraph, chunks[0]);
         })?;
