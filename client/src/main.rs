@@ -9,6 +9,7 @@
 
 //Next we want to be able to scroll the tui that we have created.
 use chrono::Utc;
+use crossterm::event::{KeyEvent, KeyModifiers};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -18,11 +19,13 @@ use crossterm::{
 use futures::{SinkExt, StreamExt};
 use std::io::{self, stdin, stdout, Write};
 use std::net::{IpAddr, SocketAddr as StdSocketAddr};
+use textwrap::wrap;
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::TcpSocket;
 use tokio::sync::broadcast::{channel, Receiver, Sender};
 use tokio::time::Duration;
 use tokio_util::codec::{FramedRead, FramedWrite, LinesCodec};
+use tui::widgets::Wrap;
 use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
@@ -30,6 +33,13 @@ use tui::{
     widgets::{Block, Borders, Paragraph},
     Terminal,
 };
+
+fn offset_from_top(total: u16, pane_height: u16, from_bottom: u16) -> u16 {
+    // how far we *could* scroll if we wanted the very last line
+    let max_up = total.saturating_sub(pane_height);
+    // clamp: 0 … max_up
+    max_up.saturating_sub(from_bottom.min(max_up))
+}
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -82,57 +92,64 @@ async fn main() -> Result<(), io::Error> {
 
     let mut input = String::new();
     let mut display_lines: Vec<String> = Vec::new();
-    let mut scroll: usize = 0; //We will follow the latest line.
 
+    let mut scroll_offset: u16 = 0;
     let mut cursor_position = 0;
+    let mut input_scroll: u16 = 0;
 
+    //Beginning of the event loop
     loop {
+        let size = terminal.size().expect("Cannot unwrap the terminal!!!");
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(90), Constraint::Percentage(10)].as_ref())
+            .split(size);
+
+        let pane_width = chunks[0].width;
+        let pane_height = chunks[0].height;
+
         match rx1.try_recv() {
             Ok(peer_msg) => {
-                display_lines.push(peer_msg);
+                for wrapped in wrap(&peer_msg, pane_width as usize) {
+                    display_lines.push(wrapped.into_owned());
+                }
             }
             Err(_) => {}
         }
 
         if event::poll(Duration::from_millis(10))? {
             // If there is a key event, process it
-            if let Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Char(c) => {
+            if let Event::Key(KeyEvent { code, modifiers }) = event::read()? {
+                match (code, modifiers) {
+                    (KeyCode::Char(c), KeyModifiers::NONE) => {
                         input.insert(cursor_position, c);
-                        if input.len() > 0 && input.len() % 180 == 0 {
-                            input.insert(cursor_position, '\n');
-                            cursor_position += 1;
-                        }
                         cursor_position += 1;
                     }
-                    KeyCode::Backspace => {
+                    (KeyCode::Backspace, KeyModifiers::NONE) => {
                         if cursor_position > 0 {
                             cursor_position -= 1;
                             input.remove(cursor_position);
                         }
                     }
-                    KeyCode::Up => {
-                        if scroll < display_lines.len().saturating_sub(1) {
-                            scroll += 1;
-                        }
+
+                    (KeyCode::Up, KeyModifiers::NONE) => {
+                        scroll_offset = scroll_offset.saturating_add(1)
                     }
-                    KeyCode::Down => {
-                        if scroll > 0 {
-                            scroll -= 1;
-                        }
+                    (KeyCode::Down, KeyModifiers::NONE) => {
+                        scroll_offset = scroll_offset.saturating_sub(1)
                     }
-                    KeyCode::Left => {
+
+                    (KeyCode::Left, KeyModifiers::NONE) => {
                         if cursor_position > 0 {
                             cursor_position -= 1;
                         }
                     }
-                    KeyCode::Right => {
+                    (KeyCode::Right, KeyModifiers::NONE) => {
                         if cursor_position < input.len() {
                             cursor_position += 1;
                         }
                     }
-                    KeyCode::Enter => {
+                    (KeyCode::Enter, KeyModifiers::NONE) => {
                         let time = Utc::now();
                         let time = time.format("%Y-%m-%d %H:%M:%S").to_string();
                         let mut msg = format!("{}  {}: {}", time, username, input);
@@ -144,7 +161,15 @@ async fn main() -> Result<(), io::Error> {
                         input.clear();
                         cursor_position = 0;
                     }
-                    KeyCode::Esc => {
+
+                    (KeyCode::Up, KeyModifiers::SHIFT) => {
+                        input_scroll = input_scroll.saturating_add(1)
+                    }
+                    (KeyCode::Down, KeyModifiers::SHIFT) => {
+                        input_scroll = input_scroll.saturating_sub(1)
+                    }
+
+                    (KeyCode::Esc, KeyModifiers::NONE) => {
                         disable_raw_mode()?;
                         execute!(
                             terminal.backend_mut(),
@@ -163,13 +188,6 @@ async fn main() -> Result<(), io::Error> {
 
         // Redraw the terminal with the updated state
         terminal.draw(|f| {
-            let size = f.size();
-
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Percentage(90), Constraint::Percentage(10)].as_ref())
-                .split(size);
-
             let input_with_cursor = if cursor_position < input.len() {
                 let (left, right) = input.split_at(cursor_position);
                 format!("{}|{}", left, right)
@@ -177,30 +195,26 @@ async fn main() -> Result<(), io::Error> {
                 format!("{}|", input)
             };
 
-            // Input area
+            let total_rows = display_lines.len() as u16;
+            let start_row = total_rows.saturating_sub(pane_height + scroll_offset);
+            let end_row = start_row + pane_height.min(total_rows);
+
+            let visible = display_lines[start_row as usize..end_row as usize].join("\n");
+
+            let display_paragraph = Paragraph::new(visible)
+                .block(Block::default().borders(Borders::ALL).title("Display Area"))
+                .wrap(Wrap { trim: false });
+
             let input_paragraph = Paragraph::new(input_with_cursor)
                 .block(Block::default().borders(Borders::ALL).title("Input Area"))
-                .style(Style::default().fg(Color::Yellow));
+                .style(Style::default().fg(Color::Yellow))
+                .wrap(Wrap { trim: false });
+
             f.render_widget(input_paragraph, chunks[1]);
-
-            let display_height = chunks[0].height.saturating_sub(2) as usize; // leave room for borders
-
-            let total_lines = display_lines.len();
-            let start_line = if scroll >= total_lines {
-                0
-            } else {
-                total_lines.saturating_sub(scroll + display_height)
-            };
-
-            let visible_lines = &display_lines[start_line..total_lines - scroll];
-            let display_text = visible_lines.join("\n");
-
-            let mut display_paragraph = Paragraph::new(display_text)
-                .block(Block::default().borders(Borders::ALL).title("Display Area"));
-
             f.render_widget(display_paragraph, chunks[0]);
         })?;
-    }
+    } //End of the event loop
+
     let _ = reading_thread.await;
     let _ = sending_thread.await;
 
