@@ -8,7 +8,7 @@
  */
 
 //Next we want to be able to scroll the tui that we have created.
-
+use chrono::Utc;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -82,6 +82,7 @@ async fn main() -> Result<(), io::Error> {
 
     let mut input = String::new();
     let mut display_lines: Vec<String> = Vec::new();
+    let mut scroll: usize = 0; //We will follow the latest line.
 
     let mut cursor_position = 0;
 
@@ -111,6 +112,16 @@ async fn main() -> Result<(), io::Error> {
                             input.remove(cursor_position);
                         }
                     }
+                    KeyCode::Up => {
+                        if scroll < display_lines.len().saturating_sub(1) {
+                            scroll += 1;
+                        }
+                    }
+                    KeyCode::Down => {
+                        if scroll > 0 {
+                            scroll -= 1;
+                        }
+                    }
                     KeyCode::Left => {
                         if cursor_position > 0 {
                             cursor_position -= 1;
@@ -122,10 +133,13 @@ async fn main() -> Result<(), io::Error> {
                         }
                     }
                     KeyCode::Enter => {
-                        let mut msg = format!("{}: {}", username, input);
+                        let time = Utc::now();
+                        let time = time.format("%Y-%m-%d %H:%M:%S").to_string();
+                        let mut msg = format!("{}  {}: {}", time, username, input);
                         if msg.len() > 40 {
                             msg.push('\n');
                         }
+
                         let _ = tx0.send(msg);
                         input.clear();
                         cursor_position = 0;
@@ -170,19 +184,20 @@ async fn main() -> Result<(), io::Error> {
             f.render_widget(input_paragraph, chunks[1]);
 
             let display_height = chunks[0].height.saturating_sub(2) as usize; // leave room for borders
-            let total_lines = display_lines.len();
 
-            let start_line = if total_lines > display_height {
-                total_lines - display_height
-            } else {
+            let total_lines = display_lines.len();
+            let start_line = if scroll >= total_lines {
                 0
+            } else {
+                total_lines.saturating_sub(scroll + display_height)
             };
 
-            let visible_lines = &display_lines[start_line..];
+            let visible_lines = &display_lines[start_line..total_lines - scroll];
             let display_text = visible_lines.join("\n");
 
-            let display_paragraph = Paragraph::new(display_text)
+            let mut display_paragraph = Paragraph::new(display_text)
                 .block(Block::default().borders(Borders::ALL).title("Display Area"));
+
             f.render_widget(display_paragraph, chunks[0]);
         })?;
     }

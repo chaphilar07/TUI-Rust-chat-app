@@ -7,6 +7,17 @@ use tokio::{
 };
 use tokio_util::codec::{FramedRead, FramedWrite, LinesCodec};
 
+//We create a struct so that we can rememver the usernames and passwords.
+/*
+struct UserInformation {
+    username: String,
+    password: String,
+    active: bool,
+    sign_in_count: u32,
+}
+*/
+
+//START OF MAIN
 #[tokio::main]
 async fn main() {
     let server = TcpListener::bind("127.0.0.1:42069")
@@ -27,8 +38,7 @@ async fn main() {
         tokio::spawn(handle_user(tcp, tx.clone(), history_clone));
     }
 }
-//End main
-
+//END OF MAIN
 async fn handle_user(
     mut tcp: TcpStream,
     tx: Sender<String>,

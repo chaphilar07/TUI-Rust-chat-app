@@ -18,3 +18,19 @@ The server listens for client connections and handles message distribution.
 
 ```bash
 cargo run -p server
+
+
+
+The cient will connect to the server and open broadcast channels
+
+cargo run -p client
+
+
+
+
+
+
+
+
+
+
