@@ -32,6 +32,7 @@ async fn main() {
             .await
             .expect("Could not establish connection to the client");
 
+        tcp.set_nodelay(true);
         println!("New client {:?} connected", client_addr);
 
         let history_clone = Arc::clone(&history);

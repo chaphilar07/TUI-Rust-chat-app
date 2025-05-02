@@ -65,6 +65,7 @@ async fn main() -> Result<(), io::Error> {
         .await
         .expect("Could not establish a connection with the client");
     println!("Connected to the server!");
+
     let (reader, writer) = connection.into_split();
 
     let stream = FramedRead::new(reader, LinesCodec::new());
@@ -105,17 +106,8 @@ async fn main() -> Result<(), io::Error> {
             .constraints([Constraint::Percentage(90), Constraint::Percentage(10)].as_ref())
             .split(size);
 
-        let pane_width = chunks[0].width;
-        let pane_height = chunks[0].height;
-
-        match rx1.try_recv() {
-            Ok(peer_msg) => {
-                for wrapped in wrap(&peer_msg, pane_width as usize) {
-                    display_lines.push(wrapped.into_owned());
-                }
-            }
-            Err(_) => {}
-        }
+        let pane_width = chunks[0].width.saturating_sub(2);
+        let pane_height = chunks[0].height.saturating_sub(2);
 
         if event::poll(Duration::from_millis(10))? {
             // If there is a key event, process it
@@ -185,6 +177,15 @@ async fn main() -> Result<(), io::Error> {
                 }
             }
         }
+        match rx1.try_recv() {
+            Ok(peer_msg) => {
+                for wrapped in wrap(&peer_msg, pane_width as usize) {
+                    display_lines.push(wrapped.into_owned());
+                }
+                scroll_offset = 0;
+            }
+            Err(_) => {}
+        }
 
         // Redraw the terminal with the updated state
         terminal.draw(|f| {
@@ -196,14 +197,14 @@ async fn main() -> Result<(), io::Error> {
             };
 
             let total_rows = display_lines.len() as u16;
+
             let start_row = total_rows.saturating_sub(pane_height + scroll_offset);
             let end_row = start_row + pane_height.min(total_rows);
 
             let visible = display_lines[start_row as usize..end_row as usize].join("\n");
 
             let display_paragraph = Paragraph::new(visible)
-                .block(Block::default().borders(Borders::ALL).title("Display Area"))
-                .wrap(Wrap { trim: false });
+                .block(Block::default().borders(Borders::ALL).title("Display Area"));
 
             let input_paragraph = Paragraph::new(input_with_cursor)
                 .block(Block::default().borders(Borders::ALL).title("Input Area"))
