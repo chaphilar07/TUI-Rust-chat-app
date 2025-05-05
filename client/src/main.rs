@@ -15,13 +15,15 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-
 use futures::{SinkExt, StreamExt};
+use inquire::{Password, PasswordDisplayMode};
 use std::io::{self, stdin, stdout, Write};
+use std::net::TcpStream as BlockingStream;
 use std::net::{IpAddr, SocketAddr as StdSocketAddr};
+use std::process::exit;
 use textwrap::wrap;
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
-use tokio::net::TcpSocket;
+use tokio::net::{TcpSocket, TcpStream};
 use tokio::sync::broadcast::{channel, Receiver, Sender};
 use tokio::time::Duration;
 use tokio_util::codec::{FramedRead, FramedWrite, LinesCodec};
@@ -33,7 +35,6 @@ use tui::{
     widgets::{Block, Borders, Paragraph},
     Terminal,
 };
-
 fn offset_from_top(total: u16, pane_height: u16, from_bottom: u16) -> u16 {
     // how far we *could* scroll if we wanted the very last line
     let max_up = total.saturating_sub(pane_height);
@@ -42,7 +43,6 @@ fn offset_from_top(total: u16, pane_height: u16, from_bottom: u16) -> u16 {
 }
 
 use std::sync::atomic::{AtomicBool, Ordering};
-
 static IS_RUNNING: AtomicBool = AtomicBool::new(true);
 
 #[tokio::main]
@@ -68,18 +68,83 @@ async fn main() -> Result<(), io::Error> {
 
     let (reader, writer) = connection.into_split();
 
-    let stream = FramedRead::new(reader, LinesCodec::new());
-    let sink = FramedWrite::new(writer, LinesCodec::new());
+    let mut stream = FramedRead::new(reader, LinesCodec::new());
+    let mut sink = FramedWrite::new(writer, LinesCodec::new());
 
     let mut username = String::new();
 
-    print!("Enter a username for the server: ");
-    let _ = stdout().flush();
-    stdin()
-        .read_line(&mut username)
-        .expect("Could not read the username");
+    let mut valid_user = false;
+    let mut valid_pass = false;
 
-    username = username.trim().to_string(); // Remove any trailing newlines
+    while !valid_user & !valid_pass {
+        print!("Enter a username for the server: ");
+        let _ = stdout().flush();
+        stdin()
+            .read_line(&mut username)
+            .expect("Could not read the username");
+
+        username = username.trim().to_string(); // Remove any trailing newlines
+
+        let _ = sink.send(username.clone()).await;
+
+        valid_user = match stream.next().await {
+            Some(result) => match result {
+                Ok(line) => match line.trim() {
+                    "100" | "101" => {
+                        println!("Valid user name code receieved from the server");
+                        true
+                    }
+                    _ => false,
+                },
+
+                Err(err) => {
+                    println!("Connection to the server interrupted exiting");
+                    exit(1);
+                }
+            },
+            None => {
+                println!("Connection to the server was interrupted");
+                exit(1);
+            }
+        };
+
+        //Now we would take the user input for the password, then we would send that to the server.
+        let password = Password::new("Enter your password")
+            .with_display_mode(PasswordDisplayMode::Masked)
+            .prompt()
+            .expect("Could not unwrap the password");
+
+        match sink.send(password.clone()).await {
+            Ok(num) => {
+                println!("Password sent successfully");
+            }
+            Err(err) => {
+                println!("Could not send the pas word to the server");
+            }
+        }
+
+        valid_pass = match stream.next().await {
+            Some(result) => match result {
+                Ok(line) => match line.trim() {
+                    "100" | "101" => true,
+                    _ => false,
+                },
+                Err(err) => {
+                    println!("Connection with the server interrupted");
+                    exit(1);
+                }
+            },
+
+            None => {
+                println!("Connection with the server intererupted");
+                exit(1);
+            }
+        }
+    }
+    let reading_thread = tokio::spawn(read_from_server(stream, tx1));
+    let sending_thread = tokio::spawn(send_to_server(sink, rx0));
+
+    //If we get to this point we are now able to enter the server!
 
     enable_raw_mode()?;
     let mut stdout = stdout();
@@ -87,9 +152,6 @@ async fn main() -> Result<(), io::Error> {
 
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-
-    let reading_thread = tokio::spawn(read_from_server(stream, tx1));
-    let sending_thread = tokio::spawn(send_to_server(sink, rx0));
 
     let mut input = String::new();
     let mut display_lines: Vec<String> = Vec::new();
@@ -105,6 +167,9 @@ async fn main() -> Result<(), io::Error> {
             .direction(Direction::Vertical)
             .constraints([Constraint::Percentage(90), Constraint::Percentage(10)].as_ref())
             .split(size);
+
+        let input_height = chunks[1].height.saturating_sub(2);
+        let input_width = chunks[1].width.saturating_sub(2);
 
         let pane_width = chunks[0].width.saturating_sub(2);
         let pane_height = chunks[0].height.saturating_sub(2);
@@ -144,20 +209,17 @@ async fn main() -> Result<(), io::Error> {
                     (KeyCode::Enter, KeyModifiers::NONE) => {
                         let time = Utc::now();
                         let time = time.format("%Y-%m-%d %H:%M:%S").to_string();
-                        let mut msg = format!("{}  {}: {}", time, username, input);
-                        if msg.len() > 40 {
-                            msg.push('\n');
-                        }
+                        let msg = format!("{}  {}: {}", time, username, input);
 
                         let _ = tx0.send(msg);
                         input.clear();
                         cursor_position = 0;
                     }
 
-                    (KeyCode::Up, KeyModifiers::SHIFT) => {
+                    (KeyCode::Up, KeyModifiers::ALT) => {
                         input_scroll = input_scroll.saturating_add(1)
                     }
-                    (KeyCode::Down, KeyModifiers::SHIFT) => {
+                    (KeyCode::Down, KeyModifiers::ALT) => {
                         input_scroll = input_scroll.saturating_sub(1)
                     }
 
@@ -197,10 +259,8 @@ async fn main() -> Result<(), io::Error> {
             };
 
             let total_rows = display_lines.len() as u16;
-
             let start_row = total_rows.saturating_sub(pane_height + scroll_offset);
             let end_row = start_row + pane_height.min(total_rows);
-
             let visible = display_lines[start_row as usize..end_row as usize].join("\n");
 
             let display_paragraph = Paragraph::new(visible)
@@ -208,8 +268,7 @@ async fn main() -> Result<(), io::Error> {
 
             let input_paragraph = Paragraph::new(input_with_cursor)
                 .block(Block::default().borders(Borders::ALL).title("Input Area"))
-                .style(Style::default().fg(Color::Yellow))
-                .wrap(Wrap { trim: false });
+                .style(Style::default().fg(Color::Yellow));
 
             f.render_widget(input_paragraph, chunks[1]);
             f.render_widget(display_paragraph, chunks[0]);

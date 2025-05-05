@@ -1,43 +1,143 @@
 use futures::{SinkExt, StreamExt};
+use once_cell::sync::Lazy;
+use sqlx::SqlitePool;
+use std::process::exit;
 use std::sync::Arc;
+use tokio::io::AsyncReadExt;
 use tokio::sync::Mutex;
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::broadcast::{self, Sender},
 };
 use tokio_util::codec::{FramedRead, FramedWrite, LinesCodec};
+static DB: Lazy<SqlitePool> = Lazy::new(|| {
+    // WAL mode avoids many "database is locked" errors in multi‑client chat
+    SqlitePool::connect_lazy("sqlite:Users.db?mode=rwc").expect("pool")
+});
 
-//We create a struct so that we can rememver the usernames and passwords.
-/*
-struct UserInformation {
+use std::net::TcpListener as BlockingListener;
+
+//The user struct
+struct User {
+    id: u16,
     username: String,
     password: String,
-    active: bool,
-    sign_in_count: u32,
+    signin_count: u16,
+    ip_addr: String,
 }
-*/
 
 //START OF MAIN
 #[tokio::main]
-async fn main() {
-    let server = TcpListener::bind("127.0.0.1:42069")
-        .await
-        .expect("Could not bind the listening socket");
+async fn main() -> anyhow::Result<()> {
+    let listener = TcpListener::bind("127.0.0.1:42069").await;
+
+    let listener = match listener {
+        Ok(real_listener) => {
+            println!("Connection has been established, server listnening on socket 42069");
+            real_listener
+        }
+        Err(err) => {
+            println!("Error cannot bind the listener to the socket exiting");
+            exit(1);
+        }
+    };
+
     let (tx, _) = broadcast::channel::<String>(32);
     let history: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
 
     loop {
-        let (tcp, client_addr) = server
+        let (mut tcp, addr) = listener
             .accept()
             .await
-            .expect("Could not establish connection to the client");
+            .expect("Could not accept the incoming connection");
+        println!("New connection accepted from address {}", addr);
 
-        tcp.set_nodelay(true);
-        println!("New client {:?} connected", client_addr);
+        let ipaddr = addr.to_string();
+        let (reader, writer) = tcp.split();
+
+        let mut stream = FramedRead::new(reader, LinesCodec::new());
+        let mut sink = FramedWrite::new(writer, LinesCodec::new());
+
+        let valid_username = false;
+        let valid_password = false;
+
+        let username = match stream.next().await {
+            Some(Ok(line)) => {
+                println!("Username {} has attempted to log on to the server", line);
+                line
+            }
+            _ => {
+                println!("connection closed before the username could be received");
+                continue;
+            }
+        };
+
+        let known_user: bool =
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM Users WHERE username = ?")
+                .bind(&username)
+                .fetch_one(&*DB)
+                .await
+                .expect("Could not unwrap the query for all usernames")
+                != 0;
+
+        match known_user {
+            true => {
+                let _ = sink.send("100").await;
+            }
+            false => {
+                let _ = sink.send("101").await;
+            }
+        }
+
+        let password = match stream.next().await {
+            Some(Ok(line)) => {
+                println!("Successfully received the password from the user");
+                line
+            }
+            _ => {
+                println!("Error connection closed before client sent password.");
+                continue;
+            }
+        };
+
+        let passed = if known_user {
+            println!("HERE");
+            sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM Users 
+                              WHERE username =? AND password = ?",
+            )
+            .bind(&username)
+            .bind(&password)
+            .fetch_one(&*DB)
+            .await
+            .expect("Could not unwrap the DB query")
+                != 0
+        } else {
+            println!("HERE");
+            let _ = sqlx::query!(
+                "INSERT INTO Users (username,password,ipaddr) VALUES (?1,?2,?3)",
+                username,
+                password,
+                ipaddr
+            )
+            .execute(&*DB)
+            .await
+            .expect("Could not insert the new tuple into the table");
+            true
+        };
+
+        if !passed {
+            let _ = sink.send("102").await;
+            continue;
+        }
+
+        let _ = sink.send("100").await;
 
         let history_clone = Arc::clone(&history);
-        tokio::spawn(handle_user(tcp, tx.clone(), history_clone));
+        let _ = tokio::spawn(handle_user(tcp, tx.clone(), history_clone));
     }
+
+    Ok(())
 }
 //END OF MAIN
 async fn handle_user(
