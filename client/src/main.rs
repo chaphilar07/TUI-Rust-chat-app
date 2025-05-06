@@ -76,7 +76,7 @@ async fn main() -> Result<(), io::Error> {
     let mut valid_user = false;
     let mut valid_pass = false;
 
-    while !valid_user & !valid_pass {
+    while !valid_user {
         print!("Enter a username for the server: ");
         let _ = stdout().flush();
         stdin()
@@ -107,8 +107,9 @@ async fn main() -> Result<(), io::Error> {
                 exit(1);
             }
         };
+    }
 
-        //Now we would take the user input for the password, then we would send that to the server.
+    while !valid_pass {
         let password = Password::new("Enter your password")
             .with_display_mode(PasswordDisplayMode::Masked)
             .prompt()
@@ -127,6 +128,13 @@ async fn main() -> Result<(), io::Error> {
             Some(result) => match result {
                 Ok(line) => match line.trim() {
                     "100" | "101" => true,
+                    "102" => {
+                        println!(
+                            "Invalid password used for the known user {}, please try again",
+                            username
+                        );
+                        false
+                    }
                     _ => false,
                 },
                 Err(err) => {
@@ -139,7 +147,9 @@ async fn main() -> Result<(), io::Error> {
                 println!("Connection with the server intererupted");
                 exit(1);
             }
-        }
+        };
+
+        println!("{}", valid_pass);
     }
     let reading_thread = tokio::spawn(read_from_server(stream, tx1));
     let sending_thread = tokio::spawn(send_to_server(sink, rx0));

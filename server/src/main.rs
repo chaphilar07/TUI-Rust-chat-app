@@ -58,8 +58,8 @@ async fn main() -> anyhow::Result<()> {
         let mut stream = FramedRead::new(reader, LinesCodec::new());
         let mut sink = FramedWrite::new(writer, LinesCodec::new());
 
-        let valid_username = false;
-        let valid_password = false;
+        let valid_user = false;
+        let valid_pass = false;
 
         let username = match stream.next().await {
             Some(Ok(line)) => {
@@ -89,7 +89,7 @@ async fn main() -> anyhow::Result<()> {
             }
         }
 
-        let password = match stream.next().await {
+        let mut password = match stream.next().await {
             Some(Ok(line)) => {
                 println!("Successfully received the password from the user");
                 line
@@ -100,7 +100,7 @@ async fn main() -> anyhow::Result<()> {
             }
         };
 
-        let passed = if known_user {
+        let mut passed = if known_user {
             println!("HERE");
             sqlx::query_scalar::<_, i64>(
                 "SELECT COUNT(*) FROM Users 
@@ -126,9 +126,38 @@ async fn main() -> anyhow::Result<()> {
             true
         };
 
-        if !passed {
+        while !passed {
+            println!("{}", passed);
             let _ = sink.send("102").await;
-            continue;
+
+            //Now we would have to wait for the client to resend a valid password and we will have
+            //to check if it is the valid password for the user.
+
+            password = match stream.next().await {
+                Some(Ok(line)) => {
+                    println!("Successfully received the password from the user now comparing ...");
+                    line
+                }
+                Some(Err(err)) => {
+                    println!("Error in the sending {}", err);
+                    continue;
+                }
+                None => {
+                    println!("Connection with the client has been interrupted");
+                    continue;
+                }
+            };
+
+            passed = sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM Users 
+                              WHERE username =? AND password = ?",
+            )
+            .bind(&username)
+            .bind(&password)
+            .fetch_one(&*DB)
+            .await
+            .expect("Could not unwrap the DB query")
+                != 0;
         }
 
         let _ = sink.send("100").await;
