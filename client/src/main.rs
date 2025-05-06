@@ -17,10 +17,12 @@ use crossterm::{
 };
 use futures::{SinkExt, StreamExt};
 use inquire::{Password, PasswordDisplayMode};
+use serde::{Deserialize, Serialize};
 use std::io::{self, stdin, stdout, Write};
 use std::net::TcpStream as BlockingStream;
 use std::net::{IpAddr, SocketAddr as StdSocketAddr};
 use std::process::exit;
+use std::sync::atomic::{AtomicBool, Ordering};
 use textwrap::wrap;
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::{TcpSocket, TcpStream};
@@ -35,15 +37,14 @@ use tui::{
     widgets::{Block, Borders, Paragraph},
     Terminal,
 };
-fn offset_from_top(total: u16, pane_height: u16, from_bottom: u16) -> u16 {
-    // how far we *could* scroll if we wanted the very last line
-    let max_up = total.saturating_sub(pane_height);
-    // clamp: 0 … max_up
-    max_up.saturating_sub(from_bottom.min(max_up))
-}
-
-use std::sync::atomic::{AtomicBool, Ordering};
 static IS_RUNNING: AtomicBool = AtomicBool::new(true);
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Message {
+    username: String,
+    timestamp: String,
+    msg: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
@@ -249,14 +250,33 @@ async fn main() -> Result<(), io::Error> {
                 }
             }
         }
+
+        //We need to change this logic so that the client that
         match rx1.try_recv() {
             Ok(peer_msg) => {
-                for wrapped in wrap(&peer_msg, pane_width as usize) {
-                    display_lines.push(wrapped.into_owned());
+                //Now we should be receiving json messages, we need to deseiralize them.
+                let desierialized_msg: Result<Message, _> = serde_json::from_str(&peer_msg);
+
+                match desierialized_msg {
+                    Ok(message) => {
+                        let formatted_msg = format!(
+                            "{}:{} - {}",
+                            message.timestamp, message.username, message.msg
+                        );
+                        for wrapped in wrap(&formatted_msg, pane_width as usize) {
+                            display_lines.push(wrapped.into_owned());
+                        }
+                    }
+                    Err(err) => {
+                        println!("Could not deserialize the object error {}", err);
+                    }
                 }
-                scroll_offset = 0;
+
+                scroll_offset = 0; //Set to the most recent message
             }
-            Err(_) => {}
+            Err(_) => {
+                println!("Connection to the server was interrupted");
+            }
         }
 
         // Redraw the terminal with the updated state

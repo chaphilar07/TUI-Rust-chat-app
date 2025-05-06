@@ -9,6 +9,7 @@ use tokio::{
     net::{TcpListener, TcpStream},
     sync::broadcast::{self, Sender},
 };
+
 use tokio_util::codec::{FramedRead, FramedWrite, LinesCodec};
 static DB: Lazy<SqlitePool> = Lazy::new(|| {
     // WAL mode avoids many "database is locked" errors in multi‑client chat
@@ -110,7 +111,6 @@ async fn main() -> anyhow::Result<()> {
             .expect("Could not unwrap the DB query")
                 != 0
         } else {
-            println!("HERE");
             let _ = sqlx::query!(
                 "INSERT INTO Users (username,password,ipaddr) VALUES (?1,?2,?3)",
                 username,
@@ -176,6 +176,9 @@ async fn handle_user(
     let mut sink = FramedWrite::new(writer, LinesCodec::new());
     let mut rx = tx.subscribe();
 
+    //TODO Need to redo how the history gets sent to the client, we want to basically load the so
+    //many most recent messages from the server, then we send those to the client, we should load
+    //these from the database and then serialize them into json objects
     {
         let history_clone = history.lock().await;
         if !history_clone.is_empty() {
@@ -194,7 +197,6 @@ async fn handle_user(
                     Some(msg) => {
                         match msg{
                             Ok(msg) => {
-                                {
                                     let parts: Vec<&str> = msg.split_ascii_whitespace().collect();
 
                                     let datetime:String = format!("{}:{}", parts[0], parts[1]);
@@ -207,15 +209,14 @@ async fn handle_user(
                                     let json_msg = Message{ username: username, timestamp: datetime, msg:  msg.clone()};
 
 
-                                    let json_string = serde_json::to_string(&json_msg).unwrap();
-                                    println!("Serialized JSON String: {}", json_string);
+                                    let wire = serde_json::to_string(&json_msg).unwrap();
+                                    println!("Serialized JSON String: {}", wire);
 
+                                    //Now we need to send to the clients the
 
                                     let mut history_clone = history.lock().await;
                                     history_clone.push(msg.clone());
-                                }
-
-                                msg
+                                wire
                             },
                             Err(_) => {
                                 break},

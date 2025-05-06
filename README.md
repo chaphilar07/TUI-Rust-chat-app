@@ -30,7 +30,10 @@ cargo run -p client
 
 
 
+Added logging features for the code that logs usernames/passwords and message logging on the server using SQLite. 
 
+Next we will add serialization of the messages that get sent using json and serde crate.
 
-
-
+we extended the code to add the following Features
+  - we using usernames/passwords for logging purposes
+  - we added message logging in the server using a lightweight DB setup 

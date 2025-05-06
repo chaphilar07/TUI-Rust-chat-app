@@ -186,6 +186,8 @@ dependencies = [
  "futures",
  "inquire",
  "local-ip-address",
+ "serde",
+ "serde_json",
  "textwrap",
  "tokio",
  "tokio-util",
