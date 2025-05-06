@@ -14,18 +14,15 @@ static DB: Lazy<SqlitePool> = Lazy::new(|| {
     // WAL mode avoids many "database is locked" errors in multi‑client chat
     SqlitePool::connect_lazy("sqlite:Users.db?mode=rwc").expect("pool")
 });
-
+use serde::{Deserialize, Serialize};
 use std::net::TcpListener as BlockingListener;
 
-//The user struct
-struct User {
-    id: u16,
+#[derive(Serialize, Deserialize, Debug)]
+struct Message {
     username: String,
-    password: String,
-    signin_count: u16,
-    ip_addr: String,
+    timestamp: String,
+    msg: String,
 }
-
 //START OF MAIN
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -198,6 +195,22 @@ async fn handle_user(
                         match msg{
                             Ok(msg) => {
                                 {
+                                    let parts: Vec<&str> = msg.split_ascii_whitespace().collect();
+
+                                    let datetime:String = format!("{}:{}", parts[0], parts[1]);
+                                    let user_length:usize=parts[2].len();
+                                    let mut username:String = String::from(parts[2]); //We remove the last character
+                                     username.truncate(user_length-1);
+                                    let msg:String = parts[3..].join(" ");
+
+                                    let _ =sqlx::query!("INSERT INTO Messages (username,timestamp,msg) VALUES(?1,?2,?3);", username, datetime, msg).execute(&*DB).await.expect("Could not unwrap the insertion of the message");
+                                    let json_msg = Message{ username: username, timestamp: datetime, msg:  msg.clone()};
+
+
+                                    let json_string = serde_json::to_string(&json_msg).unwrap();
+                                    println!("Serialized JSON String: {}", json_string);
+
+
                                     let mut history_clone = history.lock().await;
                                     history_clone.push(msg.clone());
                                 }
