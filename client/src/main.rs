@@ -270,7 +270,6 @@ async fn main() -> Result<(), io::Error> {
                         println!("Could not deserialize the object error {}", err);
                     }
                 }
-
                 scroll_offset = 0; //Set to the most recent message
             }
             Err(_) => {

@@ -201,6 +201,7 @@ async fn handle_user(
                                     let msg:String = parts[3..].join(" ");
 
                                     let _ =sqlx::query!("INSERT INTO Messages (username,timestamp,msg) VALUES(?1,?2,?3);", username, datetime, msg).execute(&*DB).await.expect("Could not unwrap the insertion of the message");
+
                                     let json_msg = Message{  username: username, timestamp: datetime, msg:  msg.clone()};
 
 
