@@ -3,7 +3,6 @@ use once_cell::sync::Lazy;
 use sqlx::SqlitePool;
 use std::process::exit;
 use std::sync::Arc;
-use tokio::io::AsyncReadExt;
 use tokio::sync::Mutex;
 use tokio::{
     net::{TcpListener, TcpStream},
@@ -16,7 +15,6 @@ static DB: Lazy<SqlitePool> = Lazy::new(|| {
     SqlitePool::connect_lazy("sqlite:Users.db?mode=rwc").expect("pool")
 });
 use serde::{Deserialize, Serialize};
-use std::net::TcpListener as BlockingListener;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Message {
@@ -35,7 +33,10 @@ async fn main() -> anyhow::Result<()> {
             real_listener
         }
         Err(err) => {
-            println!("Error cannot bind the listener to the socket exiting");
+            println!(
+                "Error {} cannot bind the listener to the socket exiting",
+                err
+            );
             exit(1);
         }
     };
@@ -55,9 +56,6 @@ async fn main() -> anyhow::Result<()> {
 
         let mut stream = FramedRead::new(reader, LinesCodec::new());
         let mut sink = FramedWrite::new(writer, LinesCodec::new());
-
-        let valid_user = false;
-        let valid_pass = false;
 
         let username = match stream.next().await {
             Some(Ok(line)) => {
@@ -99,7 +97,6 @@ async fn main() -> anyhow::Result<()> {
         };
 
         let mut passed = if known_user {
-            println!("HERE");
             sqlx::query_scalar::<_, i64>(
                 "SELECT COUNT(*) FROM Users 
                               WHERE username =? AND password = ?",
@@ -162,8 +159,6 @@ async fn main() -> anyhow::Result<()> {
         let history_clone = Arc::clone(&history);
         let _ = tokio::spawn(handle_user(tcp, tx.clone(), history_clone));
     }
-
-    Ok(())
 }
 //END OF MAIN
 async fn handle_user(
@@ -206,7 +201,7 @@ async fn handle_user(
                                     let msg:String = parts[3..].join(" ");
 
                                     let _ =sqlx::query!("INSERT INTO Messages (username,timestamp,msg) VALUES(?1,?2,?3);", username, datetime, msg).execute(&*DB).await.expect("Could not unwrap the insertion of the message");
-                                    let json_msg = Message{ username: username, timestamp: datetime, msg:  msg.clone()};
+                                    let json_msg = Message{  username: username, timestamp: datetime, msg:  msg.clone()};
 
 
                                     let wire = serde_json::to_string(&json_msg).unwrap();
@@ -215,7 +210,7 @@ async fn handle_user(
                                     //Now we need to send to the clients the
 
                                     let mut history_clone = history.lock().await;
-                                    history_clone.push(msg.clone());
+                                    history_clone.push(wire.clone());
                                 wire
                             },
                             Err(_) => {

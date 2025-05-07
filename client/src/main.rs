@@ -19,17 +19,15 @@ use futures::{SinkExt, StreamExt};
 use inquire::{Password, PasswordDisplayMode};
 use serde::{Deserialize, Serialize};
 use std::io::{self, stdin, stdout, Write};
-use std::net::TcpStream as BlockingStream;
 use std::net::{IpAddr, SocketAddr as StdSocketAddr};
 use std::process::exit;
 use std::sync::atomic::{AtomicBool, Ordering};
 use textwrap::wrap;
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
-use tokio::net::{TcpSocket, TcpStream};
+use tokio::net::TcpSocket;
 use tokio::sync::broadcast::{channel, Receiver, Sender};
 use tokio::time::Duration;
 use tokio_util::codec::{FramedRead, FramedWrite, LinesCodec};
-use tui::widgets::Wrap;
 use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
@@ -99,7 +97,7 @@ async fn main() -> Result<(), io::Error> {
                 },
 
                 Err(err) => {
-                    println!("Connection to the server interrupted exiting");
+                    println!("Connection to the server interrupted {} exiting", err);
                     exit(1);
                 }
             },
@@ -118,10 +116,11 @@ async fn main() -> Result<(), io::Error> {
 
         match sink.send(password.clone()).await {
             Ok(num) => {
-                println!("Password sent successfully");
+                println!("Password sent successfully ");
+                num
             }
             Err(err) => {
-                println!("Could not send the pas word to the server");
+                println!("Error {} Could not send the pas word to the server", err);
             }
         }
 
@@ -139,7 +138,7 @@ async fn main() -> Result<(), io::Error> {
                     _ => false,
                 },
                 Err(err) => {
-                    println!("Connection with the server interrupted");
+                    println!("Error {} Connection with the server interrupted", err);
                     exit(1);
                 }
             },
@@ -179,7 +178,7 @@ async fn main() -> Result<(), io::Error> {
             .constraints([Constraint::Percentage(90), Constraint::Percentage(10)].as_ref())
             .split(size);
 
-        let input_height = chunks[1].height.saturating_sub(2);
+        //        let input_height = chunks[1].height.saturating_sub(2);
         let input_width = chunks[1].width.saturating_sub(2);
 
         let pane_width = chunks[0].width.saturating_sub(2);
@@ -275,7 +274,7 @@ async fn main() -> Result<(), io::Error> {
                 scroll_offset = 0; //Set to the most recent message
             }
             Err(_) => {
-                println!("Connection to the server was interrupted");
+                //Here do nothing no message is in the buffer, note that we do not await this!
             }
         }
 
@@ -288,6 +287,12 @@ async fn main() -> Result<(), io::Error> {
                 format!("{}|", input)
             };
 
+            let mut display_input: Vec<String> = Vec::new();
+            for wrapped in wrap(&input_with_cursor, input_width as usize) {
+                display_input.push(wrapped.into_owned());
+            }
+            let display_string = display_input.join("\n");
+
             let total_rows = display_lines.len() as u16;
             let start_row = total_rows.saturating_sub(pane_height + scroll_offset);
             let end_row = start_row + pane_height.min(total_rows);
@@ -296,7 +301,7 @@ async fn main() -> Result<(), io::Error> {
             let display_paragraph = Paragraph::new(visible)
                 .block(Block::default().borders(Borders::ALL).title("Display Area"));
 
-            let input_paragraph = Paragraph::new(input_with_cursor)
+            let input_paragraph = Paragraph::new(display_string)
                 .block(Block::default().borders(Borders::ALL).title("Input Area"))
                 .style(Style::default().fg(Color::Yellow));
 
