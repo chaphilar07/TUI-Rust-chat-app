@@ -1,0 +1,11 @@
+/Users/charles/Projects/Rust Projects/tui-chat-app/server/target/release/deps/libeither-cfb781f52a03b25a.rmeta: /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/lib.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/serde_untagged.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/serde_untagged_optional.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/iterator.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/into_either.rs
+
+/Users/charles/Projects/Rust Projects/tui-chat-app/server/target/release/deps/libeither-cfb781f52a03b25a.rlib: /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/lib.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/serde_untagged.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/serde_untagged_optional.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/iterator.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/into_either.rs
+
+/Users/charles/Projects/Rust Projects/tui-chat-app/server/target/release/deps/either-cfb781f52a03b25a.d: /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/lib.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/serde_untagged.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/serde_untagged_optional.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/iterator.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/into_either.rs
+
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/lib.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/serde_untagged.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/serde_untagged_optional.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/iterator.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/either-1.15.0/src/into_either.rs:

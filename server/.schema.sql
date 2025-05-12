@@ -1,0 +1,14 @@
+CREATE TABLE Users(
+  username TEXT NOT NULL,
+  password TEXT NOT NULL,
+  ipaddr TEXT NOT NULL,
+  id INTEGER PRIMARY KEY AUTOINCREMENT
+);
+
+CREATE TABLE Messages(
+  mid INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp TEXT NOT NULL,
+  username TEXT NOT NULL,
+  msg TEXT NOT NULL
+
+);

@@ -1,0 +1,11 @@
+/Users/charles/Projects/Rust Projects/tui-chat-app/client/target/release/deps/libsocket2-8b5f40f0e0e58ea8.rmeta: /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/lib.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/sockaddr.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/socket.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/sockref.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/sys/unix.rs
+
+/Users/charles/Projects/Rust Projects/tui-chat-app/client/target/release/deps/libsocket2-8b5f40f0e0e58ea8.rlib: /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/lib.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/sockaddr.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/socket.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/sockref.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/sys/unix.rs
+
+/Users/charles/Projects/Rust Projects/tui-chat-app/client/target/release/deps/socket2-8b5f40f0e0e58ea8.d: /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/lib.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/sockaddr.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/socket.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/sockref.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/sys/unix.rs
+
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/lib.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/sockaddr.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/socket.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/sockref.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.5.9/src/sys/unix.rs:

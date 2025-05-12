@@ -1,0 +1,11 @@
+/Users/charles/Projects/Rust Projects/tui-chat-app/target/release/deps/libgetrandom-405a4a43fe431fe8.rmeta: /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/lib.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/error.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/util.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/util_libc.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/getentropy.rs
+
+/Users/charles/Projects/Rust Projects/tui-chat-app/target/release/deps/libgetrandom-405a4a43fe431fe8.rlib: /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/lib.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/error.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/util.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/util_libc.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/getentropy.rs
+
+/Users/charles/Projects/Rust Projects/tui-chat-app/target/release/deps/getrandom-405a4a43fe431fe8.d: /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/lib.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/error.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/util.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/util_libc.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/getentropy.rs
+
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/lib.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/error.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/util.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/util_libc.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.2.16/src/getentropy.rs:

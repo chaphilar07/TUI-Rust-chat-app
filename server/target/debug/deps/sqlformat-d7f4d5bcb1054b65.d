@@ -1,0 +1,10 @@
+/Users/charles/Projects/Rust Projects/tui-chat-app/server/target/debug/deps/libsqlformat-d7f4d5bcb1054b65.rmeta: /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/lib.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/formatter.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/indentation.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/inline_block.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/params.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/tokenizer.rs
+
+/Users/charles/Projects/Rust Projects/tui-chat-app/server/target/debug/deps/sqlformat-d7f4d5bcb1054b65.d: /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/lib.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/formatter.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/indentation.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/inline_block.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/params.rs /Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/tokenizer.rs
+
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/lib.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/formatter.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/indentation.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/inline_block.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/params.rs:
+/Users/charles/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlformat-0.2.6/src/tokenizer.rs:
