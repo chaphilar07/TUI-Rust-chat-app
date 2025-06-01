@@ -8,6 +8,7 @@ use tokio::{
     net::{TcpListener, TcpStream},
     sync::broadcast::{self, Sender},
 };
+use local_ip_address::local_ip;
 
 use tokio_util::codec::{FramedRead, FramedWrite, LinesCodec};
 static DB: Lazy<SqlitePool> = Lazy::new(|| {
@@ -25,7 +26,12 @@ struct Message {
 //START OF MAIN
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let listener = TcpListener::bind("127.0.0.1:42069").await;
+    let server_ip=local_ip().expect("Could not obtain IP address").to_string();
+
+    let bind_addr=format!("{server_ip}:42069");
+    println!("Binding the server on {bind_addr}");
+    
+    let listener = TcpListener::bind(bind_addr).await;
 
     let listener = match listener {
         Ok(real_listener) => {

@@ -49,7 +49,11 @@ async fn main() -> Result<(), io::Error> {
     let client_socket =
         TcpSocket::new_v4().expect("Could not get a socket for the client connection");
 
-    let server_ip = "127.0.0.1"
+
+    //TODO We need to change the IP address to be some constant that is defined in the docker
+    //network that we are going to use to test the application locally.
+    let server_ip = "172.30.0.10" // Note you should change this to whatever the current
+                                  // environment requires
         .parse::<IpAddr>()
         .expect("Could not parse the server IP address");
 
@@ -59,10 +63,11 @@ async fn main() -> Result<(), io::Error> {
     let (tx0, rx0) = channel::<String>(32);
     let (tx1, mut rx1) = channel::<String>(32);
 
+    println!("Trying to establish connection with the server at 172.30.0.10:42069");
     let connection = client_socket
         .connect(server_socket)
         .await
-        .expect("Could not establish a connection with the client");
+        .expect("Could not establish a connection with the server");
     println!("Connected to the server!");
 
     let (reader, writer) = connection.into_split();

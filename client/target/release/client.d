@@ -1,1 +1,1 @@
-/Users/charles/Projects/Rust\ Projects/tui-chat-app/client/target/release/client: /Users/charles/Projects/Rust\ Projects/tui-chat-app/client/src/main.rs
+/home/charles/Documents/repos/TUI-Rust-chat-app/client/target/release/client: /home/charles/Documents/repos/TUI-Rust-chat-app/client/src/main.rs

@@ -1,52 +1,34 @@
+#Note that we are using a planning phase as well here, 
+#the cargo chef is basically doing the planning phase, this means that we compile the dependencies, then we will 
+#cache those layers so that we can reuse those cached layers and therefore we know that we can speed up the creation of
+#future images
 
-#The builder phase of the Dockerfile, 
-FROM --platform=linux/arm64 rust:1.82 AS builder
+#Note that it is very expensive to install the dpendencies for the application in rust, therefore we want to be able to reuse those layers
+#if ever we want to reuse those dependencies for a future image, basically creates cached reusable layers.
+FROM rust:1.87-slim AS planner
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev pkg-config
+RUN cargo install cargo-chef
 
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
+FROM rust:1.87-slim AS builder
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev pkg-config
+RUN cargo install cargo-chef
 
-#Copy the entire contents of the context
-COPY . ./
-COPY target/release/server ./
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json   # builds deps only
 
+COPY . .
+RUN cargo build --release
 
-#Install extra dependencies.
-RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-      libsqlite3-dev \
-      sqlite3 \
-      pkg-config \
- && rm -rf /var/lib/apt/lists/*
-
-#Get rid of the old users and create a fresh version.
-RUN rm -r Users.db
-RUN sqlite3 Users.db < .schema.sql
-
-
-#Install sqlx get cli features,
-RUN cargo install --locked sqlx-cli --no-default-features --features sqlite
-
-
-
-RUN DATABASE_URL="sqlite:Users.db" \
-    cargo sqlx prepare 
-RUN cargo build -p server --release
-
-
-
-FROM --platform=linux/arm64 debian:bookworm AS runtime
-WORKDIR /app 
-COPY --from=builder /app/target/release/server /usr/local/bin/server
-COPY --from=builder /app/Users.db ./Users.db
-
-ENTRYPOINT ["/usr/local/bin/server"]
-
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends libsqlite3-0 ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=builder /app/target/release/server .
+COPY --from=builder /app/Users.db ./
 
 EXPOSE 42069
-
-
-
-
-
-
-
+CMD ["./server"]

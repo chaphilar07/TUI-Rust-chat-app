@@ -1,19 +1,34 @@
-FROM --platform=linux/arm64 rust:1.82 AS builder
+
+# The planner stage we cache the dependencies here for our build.
+FROM rust:1.87-slim AS planner
+
 WORKDIR /app
+RUN cargo install cargo-chef
+
+COPY . ./ 
+RUN cargo chef prepare --recipe-path recipe.json
 
 
-COPY . ./
-COPY target/release/client ./ 
+# The builder, we build the actual project
+FROM rust:1.87-slim AS builder
 
-RUN cargo build -p client --release
+WORKDIR /app
+RUN cargo install cargo-chef
+COPY --from=planner /app/recipe.json recipe.json
+
+RUN cargo chef cook --recipe-path recipe.json --release
+
+COPY . ./ 
+
+RUN cargo build --release
 
 
-FROM --platform=linux/arm64 debian:bookworm AS runtime
-WORKDIR /usr/local/bin 
+# Runtime stage 
+FROM debian:bookworm-slim 
+RUN apt-get update && apt-get install -y --no-install-recommends 
 
+WORKDIR /app 
 
-COPY --from=builder /app/target/release/client /usr/local/bin/client
+COPY --from=builder /app/target/release/client .
+CMD ["./client"]
 
-
-
-ENTRYPOINT ["/usr/local/bin/client"]

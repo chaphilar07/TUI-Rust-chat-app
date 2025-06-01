@@ -24,23 +24,31 @@ Added logging features for the code that logs usernames/passwords and message lo
 
 Messages are serialized using JSON format for consistent format to different clients.
 
+## DOCKER ##
 
-we extended the code to add the following Features
-  - we using usernames/passwords for logging purposes
-  - we added message logging in the server using a lightweight DB setup 
+The project uses docker for testing we can run the docker containers in local network for testing to do this we must compile the docker images than run them.
 
+We will first have to create a custom docker network, a basic bridge network with a specific subnet, note that right now the clients are set to connect 
+to the server with IP 172.30.0.10:42069 change this if you will use a different subnet.
 
-Update: Created docker images to run the server and client code on separate machines testing to see if both work the client has already been shown to work
+# create the docker network 
+    docker network create \
+    --driver bridge \
+    --subnet 172.30.0.0/16 \
+    --gateway 172.30.0.1 \
+    chat-server-net
 
-  to run and create the docker images assuming that you have docker
+Choose IPs and subnets for how you would like to test the client-server code.
+    
+# server (already running with a fixed IP)
+    docker run -d --name chat-server \
+      --network chat-server-net --ip 172.30.0.10 \
+      charles9507/rust-chat-server:server
 
-  docker build -t server ./server
-  docker build -t client ./client
+# client (interactive)
+    docker run --rm -it --name chat-client \
+      --network chat-server-net \
+      charles9507/rust-chat-server:client
 
-  docker images (check that the images are there)
-  
-  docker run server
-  docker run client
+Note that for the client we NEED the --rm -it flags or else this will close the client prematurely because the session is not interactive.
 
-Note that the images that get created are going to create ARM64 containers, for computers that are running x86_64 architecture you should recompile the project and change the top line of the dockerfiles for the client and the server.
-  
